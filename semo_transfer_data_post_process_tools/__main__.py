@@ -93,3 +93,20 @@ print("Writing ordered_occurrences_by_institution to JSON...")
 file_io_utils.write_json(
     ordered_occurrences_by_institution, Path(OUT_DIR_PATH / "ordered_occurrences_by_institution.json")
 )
+
+# Add occurrences to the full join CSV
+full_join_row_dicts = file_io_utils.read_csv_as_row_dicts(OUT_FULL_JOIN_CSV_PATH)
+for row_dict in full_join_row_dicts:
+    semo_course_num = row_dict["Class #"]
+    institutions = institutions_by_semo_course_num[semo_course_num]
+    occurrences = len(institutions)
+    row_dict["number_of_total_semo_courses_this_institution_has"] = occurrences
+file_io_utils.write_csv_from_row_dicts(
+    full_join_row_dicts, OUT_FULL_JOIN_CSV_PATH, ordered_headers=["number_of_total_semo_courses_this_institution_has"]
+)
+
+# Order full join CSV by "Class #" then by "occurrences"
+full_join_row_dicts = file_io_utils.read_csv_as_row_dicts(OUT_FULL_JOIN_CSV_PATH)
+full_join_row_dicts.sort(key=lambda x: (x["Class #"], x["number_of_total_semo_courses_this_institution_has"]))
+file_io_utils.write_csv_from_row_dicts(full_join_row_dicts, OUT_FULL_JOIN_CSV_PATH)
+print("Done!")
