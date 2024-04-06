@@ -1,6 +1,7 @@
 import csv
 from pathlib import Path
 from pprint import pprint
+from typing import OrderedDict
 
 from semo_transfer_data_post_process_tools._easy_csv_db import EasyCsvDb
 from semo_transfer_data_post_process_tools.utils import file_io_utils
@@ -61,7 +62,34 @@ def _get_institutions_by_semo_course_num(in_csv_path: Path):
     return institutions_by_semo_course_num
 
 
+def _get_occurrences_by_institution(institutions_by_semo_course_num):
+    occurrences_by_institution = {}
+    for semo_course_num, institutions in institutions_by_semo_course_num.items():
+        for institution in institutions:
+            if institution not in occurrences_by_institution:
+                occurrences_by_institution[institution] = 0
+            occurrences_by_institution[institution] += 1
+    return occurrences_by_institution
+
+
+def _get_ordered_occurrences_by_institution(occurrences_by_institution) -> OrderedDict:
+    return OrderedDict(sorted(occurrences_by_institution.items(), key=lambda item: item[1], reverse=True))
+
+
 _write_full_join_csv(OUT_FULL_JOIN_CSV_PATH)
 institutions_by_semo_course_num = _get_institutions_by_semo_course_num(OUT_FULL_JOIN_CSV_PATH)
 print("institutions_by_semo_course_num:")
 pprint(institutions_by_semo_course_num)
+
+occurrences_by_institution = _get_occurrences_by_institution(institutions_by_semo_course_num)
+print("occurrences_by_institution:")
+pprint(occurrences_by_institution)
+
+ordered_occurrences_by_institution = _get_ordered_occurrences_by_institution(occurrences_by_institution)
+print("ordered_occurrences_by_institution:")
+pprint(ordered_occurrences_by_institution)
+
+print("Writing ordered_occurrences_by_institution to JSON...")
+file_io_utils.write_json(
+    ordered_occurrences_by_institution, Path(OUT_DIR_PATH / "ordered_occurrences_by_institution.json")
+)
