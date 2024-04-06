@@ -2,6 +2,7 @@ import csv
 from pathlib import Path
 from pprint import pprint
 from typing import OrderedDict
+from datetime import datetime
 
 from semo_transfer_data_post_process_tools._easy_csv_db import EasyCsvDb
 from semo_transfer_data_post_process_tools.utils import file_io_utils
@@ -13,7 +14,9 @@ WORK_DIR_PATH = REPO_ROOT_DIR_PATH / "work"
 OUT_DIR_PATH = REPO_ROOT_DIR_PATH / "outputs"
 IN_DIR_PATH = REPO_ROOT_DIR_PATH / "inputs"
 
-OUT_FULL_JOIN_CSV_PATH = Path(OUT_DIR_PATH / "full_join.csv")
+datetime_str = datetime.now().strftime("%Y-%m-%d")
+
+OUT_FULL_JOIN_CSV_PATH = Path(OUT_DIR_PATH / f"transferable_courses_tool_as_of_{datetime_str}.csv")
 
 INPUT_SEMO_CLASS_LAYOUT_CSV_PATH = Path(IN_DIR_PATH / "SEMO Class Layout - Working Courses.csv")
 
@@ -72,6 +75,13 @@ def _get_occurrences_by_institution(institutions_by_semo_course_num):
     return occurrences_by_institution
 
 
+def _get_num_institutions_that_have_course_by_course_num(institutions_by_semo_course_num):
+    num_institutions_that_have_course_by_course_num = {}
+    for semo_course_num, institutions in institutions_by_semo_course_num.items():
+        num_institutions_that_have_course_by_course_num[semo_course_num] = len(institutions)
+    return num_institutions_that_have_course_by_course_num
+
+
 def _get_ordered_occurrences_by_institution(occurrences_by_institution) -> OrderedDict:
     return OrderedDict(sorted(occurrences_by_institution.items(), key=lambda item: item[1], reverse=True))
 
@@ -109,4 +119,22 @@ file_io_utils.write_csv_from_row_dicts(
 full_join_row_dicts = file_io_utils.read_csv_as_row_dicts(OUT_FULL_JOIN_CSV_PATH)
 full_join_row_dicts.sort(key=lambda x: (x["Class #"], x["number_of_total_semo_courses_this_institution_has"]))
 file_io_utils.write_csv_from_row_dicts(full_join_row_dicts, OUT_FULL_JOIN_CSV_PATH)
-print("Done!")
+
+
+num_institutions_that_have_course_by_course_num = _get_num_institutions_that_have_course_by_course_num(
+    institutions_by_semo_course_num
+)
+print("num_institutions_that_have_course_by_course_num:")
+pprint(num_institutions_that_have_course_by_course_num)
+
+sorted_num_institutions_that_have_course_by_course_num = OrderedDict(
+    sorted(num_institutions_that_have_course_by_course_num.items(), key=lambda item: item[1], reverse=True)
+)
+
+print("sorted_num_institutions_that_have_course_by_course_num:")
+pprint(sorted_num_institutions_that_have_course_by_course_num)
+
+file_io_utils.write_json(
+    sorted_num_institutions_that_have_course_by_course_num,
+    Path(OUT_DIR_PATH / "sorted_num_institutions_that_have_course_by_course_num.json"),
+)
