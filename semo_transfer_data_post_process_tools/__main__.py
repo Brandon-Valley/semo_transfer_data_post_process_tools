@@ -1,7 +1,9 @@
 import csv
 from pathlib import Path
+from pprint import pprint
 
 from semo_transfer_data_post_process_tools._easy_csv_db import EasyCsvDb
+from semo_transfer_data_post_process_tools.utils import file_io_utils
 
 
 _SCRIPT_PARENT_DIR_PATH = Path(__file__).parent
@@ -32,22 +34,34 @@ def _write_full_join_csv(dest_csv_path: Path) -> None:
     db.create_table_from_csv(semo_class_layout_csv_path, table_name="semo_class_layout")
 
     # Return everything from full join:
-    #   - semo_transfer_course_equiv.semo_course_1_dept_num == semo_class_layout.'Class #'
+    #   - semo_transfer_course_equiv.semo_course_1_dept_num == semo_class_layout.'Class #' and order by Class #
     cursor = db.connection.execute(
         """
         SELECT * FROM semo_transfer_course_equiv
         JOIN semo_class_layout
-        ON semo_transfer_course_equiv.semo_course_1_dept_num = semo_class_layout."Class #";
+        ON semo_transfer_course_equiv.semo_course_1_dept_num = semo_class_layout."Class #"
+        ORDER BY "Class #";
         """
     )
 
     # Write the full join to a CSV file
     print(f"Writing full join to: {dest_csv_path}...")
-    dest_csv_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(dest_csv_path, "w", newline="") as f:
-        csv_writer = csv.writer(f)
-        csv_writer.writerow([description[0] for description in cursor.description])
-        csv_writer.writerows(cursor.fetchall())
+    file_io_utils.write_csv_from_sqlite3_cursor(cursor, dest_csv_path)
+
+
+def _get_institutions_by_semo_course_num(in_csv_path: Path):
+    row_dicts = file_io_utils.read_csv_as_row_dicts(in_csv_path)
+    institutions_by_semo_course_num = {}
+    for row_dict in row_dicts:
+        semo_course_num = row_dict["Class #"]
+        institution = row_dict["institution_name"]
+        if semo_course_num not in institutions_by_semo_course_num:
+            institutions_by_semo_course_num[semo_course_num] = []
+        institutions_by_semo_course_num[semo_course_num].append(institution)
+    return institutions_by_semo_course_num
 
 
 _write_full_join_csv(OUT_FULL_JOIN_CSV_PATH)
+institutions_by_semo_course_num = _get_institutions_by_semo_course_num(OUT_FULL_JOIN_CSV_PATH)
+print("institutions_by_semo_course_num:")
+pprint(institutions_by_semo_course_num)

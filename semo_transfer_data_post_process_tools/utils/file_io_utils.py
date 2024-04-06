@@ -1,6 +1,7 @@
 import csv
 import json
 from pathlib import Path
+import sqlite3
 from typing import Any, Dict, Iterator, List, Literal, Optional
 from typing import Generator
 
@@ -169,6 +170,19 @@ def write_csv_from_row_dicts(
         dict_writer = csv.DictWriter(output_file, fieldnames=ordered_fieldname_dict.keys())
         dict_writer.writeheader()
         dict_writer.writerows(row_dicts)
+
+
+def write_csv_from_sqlite3_cursor(cursor: sqlite3.Cursor, out_csv_path: Path):
+    """
+    Write a new .csv file to `out_csv_path` that is the result of the given sqlite3.Cursor
+    Include the header from the cursor's description.
+    """
+    out_csv_path.parent.mkdir(exist_ok=True, parents=True)
+
+    with open(out_csv_path, "w", encoding="utf-8", newline="") as out_csv:
+        csv_writer = csv.writer(out_csv)
+        csv_writer.writerow([description[0] for description in cursor.description])
+        csv_writer.writerows(cursor.fetchall())
 
 
 def write_csv_from_concatenated_csvs(csv_paths: List[Path], out_csv_path: Path):
