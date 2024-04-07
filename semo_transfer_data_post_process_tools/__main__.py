@@ -53,59 +53,74 @@ def _write_full_join_csv(dest_csv_path: Path) -> None:
     file_io_utils.write_csv_from_sqlite3_cursor(cursor, dest_csv_path)
 
 
-def _get_institutions_by_semo_course_num(in_csv_path: Path):
+def _get_institutions_by_offered_semo_course_num(in_csv_path: Path):
     row_dicts = file_io_utils.read_csv_as_row_dicts(in_csv_path)
-    institutions_by_semo_course_num = {}
+    institutions_by_offered_semo_course_num = {}
     for row_dict in row_dicts:
         semo_course_num = row_dict["Class #"]
         institution = row_dict["institution_name"]
-        if semo_course_num not in institutions_by_semo_course_num:
-            institutions_by_semo_course_num[semo_course_num] = []
-        institutions_by_semo_course_num[semo_course_num].append(institution)
-    return institutions_by_semo_course_num
+        if semo_course_num not in institutions_by_offered_semo_course_num:
+            institutions_by_offered_semo_course_num[semo_course_num] = []
+        institutions_by_offered_semo_course_num[semo_course_num].append(institution)
+    return institutions_by_offered_semo_course_num
 
 
-def _get_occurrences_by_institution(institutions_by_semo_course_num):
-    occurrences_by_institution = {}
-    for semo_course_num, institutions in institutions_by_semo_course_num.items():
+def _get_total_semo_courses_offered_at_this_institution_by_institution(institutions_by_offered_semo_course_num):
+    total_semo_courses_offered_at_this_institution_by_institution = {}
+    for semo_course_num, institutions in institutions_by_offered_semo_course_num.items():
         for institution in institutions:
-            if institution not in occurrences_by_institution:
-                occurrences_by_institution[institution] = 0
-            occurrences_by_institution[institution] += 1
-    return occurrences_by_institution
+            if institution not in total_semo_courses_offered_at_this_institution_by_institution:
+                total_semo_courses_offered_at_this_institution_by_institution[institution] = 0
+            total_semo_courses_offered_at_this_institution_by_institution[institution] += 1
+    return total_semo_courses_offered_at_this_institution_by_institution
 
 
-def _get_num_institutions_that_have_course_by_course_num(institutions_by_semo_course_num):
+def _get_num_institutions_that_have_course_by_course_num(institutions_by_offered_semo_course_num):
     num_institutions_that_have_course_by_course_num = {}
-    for semo_course_num, institutions in institutions_by_semo_course_num.items():
+    for semo_course_num, institutions in institutions_by_offered_semo_course_num.items():
         num_institutions_that_have_course_by_course_num[semo_course_num] = len(institutions)
     return num_institutions_that_have_course_by_course_num
 
 
-def _get_ordered_occurrences_by_institution(occurrences_by_institution) -> OrderedDict:
-    return OrderedDict(sorted(occurrences_by_institution.items(), key=lambda item: item[1], reverse=True))
+def _get_ordered_total_semo_courses_offered_at_this_institution_by_institution(
+    total_semo_courses_offered_at_this_institution_by_institution,
+) -> OrderedDict:
+    return OrderedDict(
+        sorted(
+            total_semo_courses_offered_at_this_institution_by_institution.items(),
+            key=lambda item: item[1],
+            reverse=True,
+        )
+    )
 
 
 _write_full_join_csv(OUT_FULL_JOIN_CSV_PATH)
-institutions_by_semo_course_num = _get_institutions_by_semo_course_num(OUT_FULL_JOIN_CSV_PATH)
-print("institutions_by_semo_course_num:")
-pprint(institutions_by_semo_course_num)
+institutions_by_offered_semo_course_num = _get_institutions_by_offered_semo_course_num(OUT_FULL_JOIN_CSV_PATH)
+print("institutions_by_offered_semo_course_num:")
+pprint(institutions_by_offered_semo_course_num)
 
-occurrences_by_institution = _get_occurrences_by_institution(institutions_by_semo_course_num)
-print("occurrences_by_institution:")
-pprint(occurrences_by_institution)
+total_semo_courses_offered_at_this_institution_by_institution = (
+    _get_total_semo_courses_offered_at_this_institution_by_institution(institutions_by_offered_semo_course_num)
+)
+print("total_semo_courses_offered_at_this_institution_by_institution:")
+pprint(total_semo_courses_offered_at_this_institution_by_institution)
 
-ordered_occurrences_by_institution = _get_ordered_occurrences_by_institution(occurrences_by_institution)
-print("ordered_occurrences_by_institution:")
-pprint(ordered_occurrences_by_institution)
+ordered_total_semo_courses_offered_at_this_institution_by_institution = (
+    _get_ordered_total_semo_courses_offered_at_this_institution_by_institution(
+        total_semo_courses_offered_at_this_institution_by_institution
+    )
+)
+print("ordered_total_semo_courses_offered_at_this_institution_by_institution:")
+pprint(ordered_total_semo_courses_offered_at_this_institution_by_institution)
 
-print("Writing ordered_occurrences_by_institution to JSON...")
+print("Writing ordered_total_semo_courses_offered_at_this_institution_by_institution to JSON...")
 file_io_utils.write_json(
-    ordered_occurrences_by_institution, Path(OUT_DIR_PATH / "ordered_occurrences_by_institution.json")
+    ordered_total_semo_courses_offered_at_this_institution_by_institution,
+    Path(OUT_DIR_PATH / "ordered_total_semo_courses_offered_at_this_institution_by_institution.json"),
 )
 
 num_institutions_that_have_course_by_course_num = _get_num_institutions_that_have_course_by_course_num(
-    institutions_by_semo_course_num
+    institutions_by_offered_semo_course_num
 )
 print("num_institutions_that_have_course_by_course_num:")
 pprint(num_institutions_that_have_course_by_course_num)
@@ -127,11 +142,11 @@ file_io_utils.write_json(
 full_join_row_dicts = file_io_utils.read_csv_as_row_dicts(OUT_FULL_JOIN_CSV_PATH)
 for row_dict in full_join_row_dicts:
     semo_course_num = row_dict["Class #"]
-    institutions = institutions_by_semo_course_num[semo_course_num]
+    institutions = institutions_by_offered_semo_course_num[semo_course_num]
     occurrences = len(institutions)
-    row_dict["number_of_total_semo_courses_this_institution_has"] = occurrences
+    row_dict["total_semo_courses_offered_at_this_institution"] = occurrences
 file_io_utils.write_csv_from_row_dicts(
-    full_join_row_dicts, OUT_FULL_JOIN_CSV_PATH, ordered_headers=["number_of_total_semo_courses_this_institution_has"]
+    full_join_row_dicts, OUT_FULL_JOIN_CSV_PATH, ordered_headers=["total_semo_courses_offered_at_this_institution"]
 )
 
 # Add sorted_num_institutions_that_have_course_by_course_num to the full join CSV
@@ -139,19 +154,19 @@ full_join_row_dicts = file_io_utils.read_csv_as_row_dicts(OUT_FULL_JOIN_CSV_PATH
 for row_dict in full_join_row_dicts:
     semo_course_num = row_dict["Class #"]
     num_institutions = num_institutions_that_have_course_by_course_num[semo_course_num]
-    row_dict["number_of_total_institutions_this_semo_course_is_offered"] = num_institutions
+    row_dict["total_institutions_offering_this_semo_course"] = num_institutions
 file_io_utils.write_csv_from_row_dicts(
     full_join_row_dicts,
     OUT_FULL_JOIN_CSV_PATH,
-    ordered_headers=["number_of_total_institutions_this_semo_course_is_offered"],
+    ordered_headers=["total_institutions_offering_this_semo_course"],
 )
 
-# Order full join CSV by "Class #" then by "occurrences" (number_of_total_semo_courses_this_institution_has) then by "number_of_total_semo_courses_this_institution_has"
+# Order full join CSV by "Class #" then by "occurrences" (total_semo_courses_offered_at_this_institution) then by "total_semo_courses_offered_at_this_institution"
 full_join_row_dicts = file_io_utils.read_csv_as_row_dicts(OUT_FULL_JOIN_CSV_PATH)
 full_join_row_dicts.sort(
     key=lambda x: (
-        x["number_of_total_institutions_this_semo_course_is_offered"],
-        x["number_of_total_semo_courses_this_institution_has"],
+        -int(x["total_institutions_offering_this_semo_course"]),
+        -int(x["total_semo_courses_offered_at_this_institution"]),
         x["Class #"],
     )
 )
