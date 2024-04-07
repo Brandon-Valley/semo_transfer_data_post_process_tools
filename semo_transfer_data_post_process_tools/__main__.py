@@ -137,14 +137,14 @@ file_io_utils.write_json(
     Path(OUT_DIR_PATH / "sorted_num_institutions_that_have_course_by_course_num.json"),
 )
 
-
-# Add occurrences to the full join CSV
+# Add total_semo_courses_offered_at_this_institution to the full join CSV
 full_join_row_dicts = file_io_utils.read_csv_as_row_dicts(OUT_FULL_JOIN_CSV_PATH)
 for row_dict in full_join_row_dicts:
-    semo_course_num = row_dict["Class #"]
-    institutions = institutions_by_offered_semo_course_num[semo_course_num]
-    occurrences = len(institutions)
-    row_dict["total_semo_courses_offered_at_this_institution"] = occurrences
+    institution_name = row_dict["institution_name"]
+    total_semo_courses_offered_at_this_institution = total_semo_courses_offered_at_this_institution_by_institution[
+        institution_name
+    ]
+    row_dict["total_semo_courses_offered_at_this_institution"] = total_semo_courses_offered_at_this_institution
 file_io_utils.write_csv_from_row_dicts(
     full_join_row_dicts, OUT_FULL_JOIN_CSV_PATH, ordered_headers=["total_semo_courses_offered_at_this_institution"]
 )
